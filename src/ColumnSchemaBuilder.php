@@ -20,6 +20,14 @@ class ColumnSchemaBuilder extends \yii\db\mysql\ColumnSchemaBuilder
      */
     public string $checkPattern = "json_valid([[{name}]])";
 
+    /**
+     * @var bool whether JSON-Columns should be always created as type `text` with `JSON_VALID()` - check
+     *           This can be used that column-type matches between mysql and mariadb
+     *           (Otherwise comparing dumps of both db-types would show different types)
+     *           Default to `false`, meaning nativ json-type is used (which could be auto-converted in mariadb).
+     */
+    public $forceJsonToTextWithJsonCheck = false;
+
     public function __construct(string $type, $length = null, ?Connection $db = null, array $config = [])
     {
         parent::__construct($type, $length, $db, $config);
@@ -46,6 +54,10 @@ class ColumnSchemaBuilder extends \yii\db\mysql\ColumnSchemaBuilder
                 $format = '{type}{length}{notnull}{default}{unique}{comment}{append}{check}{pos}';
         }
 
+        // Overwrite json to text, to make db-dumps comparable between mysql and mariadb
+        if ($this->forceJsonToTextWithJsonCheck && $this->isJson()) {
+            $format = \strtr($format, ['{type}' => \yii\db\Schema::TYPE_TEXT . ' CHARACTER SET utf8mb4 COLLATE utf8mb4_bin']);
+        }
         return \strtr($this->buildCompleteString($format), ['{name}' => $columnName]);
     }
 }
